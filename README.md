@@ -77,3 +77,5 @@ Python_Git/
 무작위 출제와 힌트 채점은 `feature/quiz-play` 브랜치에서 구현한 뒤 `main`에 병합했습니다. 프로젝트에 연결된 GitHub 저장소는 [eunhye0323/Python_Git](https://github.com/eunhye0323/Python_Git)입니다.
 
 별도 로컬 저장소를 복제한 뒤 복제본에서 아래 그래프를 추가해 커밋했습니다. [기능별 커밋과 브랜치 병합 그래프](docs/screenshots/git_graph.png)
+
+복제본의 커밋을 실습용 로컬 저장소에 push하고 원래 폴더에서 `git pull --ff-only`로 가져왔습니다. 직후 두 폴더의 커밋이 모두 `31ca264`임을 확인했습니다. [clone부터 pull까지의 터미널 기록](docs/screenshots/git_workflow.png)
