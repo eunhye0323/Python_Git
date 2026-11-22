@@ -66,11 +66,106 @@ Python_Git/
 
 ## 실행 화면
 
-| 확인할 내용 | 터미널 캡처 |
-| --- | --- |
-| 개발 환경 및 시작 | [Python·Git 설정](docs/screenshots/environment.png) · [첫 실행 메뉴](docs/screenshots/menu.png) |
-| 문제 등록 및 조회 | [퀴즈 추가](docs/screenshots/add_quiz.png) · [추가 후 목록](docs/screenshots/list.png) |
-| 힌트 사용 및 점수 유지 | [힌트를 사용한 풀이](docs/screenshots/play.png) · [재실행 후 최고 점수와 기록](docs/screenshots/score.png) |
+### 개발 환경 및 시작
+
+[Python·Git 설정](docs/screenshots/environment.png)
+
+```text
+Python_Git $ python --version
+Python 3.10.20
+Python_Git $ git --version
+git version 2.25.1
+Python_Git $ git rev-parse --show-toplevel
+/root/Python_Git
+Python_Git $ git branch --show-current
+main
+Python_Git $ git config --get user.name
+eunhye0323
+Python_Git $
+```
+
+[첫 실행 메뉴](docs/screenshots/menu.png)
+
+```text
+Python_Git $ python quiz_game.py
+첫 실행입니다. 기본 퀴즈를 불러옵니다.
+
+기술 퀴즈 | 메뉴
+1. 퀴즈 풀기
+2. 퀴즈 추가
+3. 퀴즈 목록
+4. 최고 점수와 플레이 기록
+5. 종료
+6. 퀴즈 삭제
+메뉴 선택 (1~6):
+```
+
+### 문제 등록 및 조회
+
+[퀴즈 추가](docs/screenshots/add_quiz.png)
+
+```text
+메뉴 선택 (1~6): 2
+
+새 퀴즈 등록
+문제: Git에서 두 브랜치의 변경을 합치는 명령은?
+선택지 1: git clone
+선택지 2: git status
+선택지 3: git merge
+선택지 4: git log
+정답 번호 (1~4): 3
+힌트 (없으면 Enter): 각 브랜치의 커밋을 하나의 이력으로 모읍니다.
+퀴즈를 추가했습니다. 현재 6개입니다.
+```
+
+[추가 후 목록](docs/screenshots/list.png)
+
+```text
+메뉴 선택 (1~6): 3
+
+등록된 퀴즈 목록 (총 6개)
+  1. Agentic AI의 핵심 특징으로 가장 적절한 것은?
+  2. 기존 AIDD(AI-Driven Development)와 비교한 AI-Native Software Engineering의 차이로 옳은 것은?
+  3. Sim2Real에서 시뮬레이션과 현실 사이의 물리적 차이를 줄이기 위해 마찰·질량·조명 등 환경 조건을 무작위로 바꾸는 기법은?
+  4. AI Agent 시대에 스테이블코인이 구현하는 핵심 금융 인프라로 기대되는 'Programmable money'의 정의로 옳은 것은?
+  5. 양자 컴퓨팅 본격 상용화의 분기점이 될 것으로 전망되는 것은?
+  6. Git에서 두 브랜치의 변경을 합치는 명령은?
+```
+
+### 힌트 사용 및 점수 유지
+
+[힌트를 사용한 풀이](docs/screenshots/play.png)
+
+```text
+메뉴 선택 (1~6): 1
+풀 문제 수 (1~6): 1
+정답은 2점, 힌트를 열면 문제당 한 번 1점 차감합니다. 결과는 100점으로 환산합니다.
+
+[문제 1/1]
+기존 AIDD(AI-Driven Development)와 비교한 AI-Native Software Engineering의 차이로 옳은 것은?
+  1. 테스트 자동화 단계에만 AI를 적용한다
+  2. 요구사항 정의부터 배포·운영까지 SDLC(Software Development Life Cycle) 전 과정을 포괄한다
+  3. 개발자를 완전히 대체하는 것을 목표로 한다
+  4. 설계 단계에서만 AI를 보조 도구로 사용한다
+정답 번호 (1~4, h=힌트): h
+힌트: 요구사항을 정하는 시점과 서비스를 운영하는 시점에 공통으로 적용할 수 있는지 살펴보세요.
+정답 번호 (1~4, h=힌트): 2
+정답입니다!
+
+결과: 1문제 중 1문제 정답 · 힌트 1회 · 50점
+새로운 최고 점수입니다!
+```
+
+[재실행 후 최고 점수와 기록](docs/screenshots/score.png)
+
+```text
+메뉴 선택 (1~6): 4
+
+최고 점수: 50점
+플레이 기록 2회 (최근 순)
+  2026-11-22 12:12:15+00:00 | 1문제 중 0문제 정답 | 힌트 0회 | 0점
+  2026-11-22 12:12:15+00:00 | 1문제 중 1문제 정답 | 힌트 1회 | 50점
+```
 
 ## Git 저장소
 
@@ -78,4 +173,65 @@ Python_Git/
 
 별도 로컬 저장소를 복제한 뒤 복제본에서 아래 그래프를 추가해 커밋했습니다. [기능별 커밋과 브랜치 병합 그래프](docs/screenshots/git_graph.png)
 
+```text
+Python_Git $ git log --oneline --graph --decorate --all
+* d94fdec (HEAD -> main, origin/main, origin/HEAD) Docs: 실행 방법과 점수·파일 구조를 설명하고 실제 터미널 화면 첨부
+* 9b6a025 Fix: 여러 실행에서 추가한 문제와 점수 기록을 저장할 때 함께 보존
+* 634ec50 Test: 콘솔 재실행, 빈 목록, 힌트 점수와 저장 실패 복구 검증
+* abd9b4f Feat: 최고 점수와 모든 완주 기록을 시간·문제 수·힌트와 함께 저장 및 조회
+* 0a98d0e Feat: 목록에서 퀴즈를 선택해 삭제하고 빈 목록도 그대로 저장
+* 5ca0865 Feat: 문제와 선택지 네 개, 선택 힌트를 입력받아 즉시 저장
+*   16239ed Merge: 무작위 퀴즈 풀이와 힌트 기능 통합
+|\
+| * 02452cb (origin/feature/quiz-play) Feat: 문제별 힌트를 열고 최초 사용 한 번만 점수에서 차감
+| * 0a52d10 Feat: 원하는 수만큼 중복 없이 무작위로 출제하고 채점 결과 표시
+|/
+* ab417ed Feat: 프로젝트 루트의 UTF-8 상태 파일을 저장하고 누락·손상 시 복구
+* 77b5ddc Feat: 반복 메뉴와 숫자 재입력, 저장된 문제 목록 화면 구현
+* ec245ad Data: 기술 퀴즈 5개의 선택지 수를 맞추고 정답 번호와 힌트 추가
+* dfae016 Feat: 문제와 네 선택지의 검증·출력·정답 판정을 Quiz로 분리
+* 9ca07fa Chore: 기존 퀴즈 초안과 문제 원본을 보존하고 실행 상태 파일 제외
+* 7fdcc26 Initial commit
+Python_Git $
+```
+
 복제본의 커밋을 실습용 로컬 저장소에 push하고 원래 폴더에서 `git pull --ff-only`로 가져왔습니다. 직후 두 폴더의 커밋이 모두 `31ca264`임을 확인했습니다. [clone부터 pull까지의 터미널 기록](docs/screenshots/git_workflow.png)
+
+```text
+$ git clone --branch main practice.git Python_Git
+Cloning into 'Python_Git'...
+done.
+$ git -C Python_Git add README.md docs/screenshots/git_graph.png
+$ git -C Python_Git commit -m "Docs: 복제본에 브랜치 병합 그래프 추가"
+[main 31ca264] Docs: 복제본에 브랜치 병합 그래프 추가
+ 2 files changed, 2 insertions(+)
+ create mode 100644 docs/screenshots/git_graph.png
+$ git -C Python_Git push origin main
+Enumerating objects: 10, done.
+Counting objects: 100% (10/10), done.
+Delta compression using up to 64 threads
+Compressing objects: 100% (5/5), done.
+Writing objects: 100% (6/6), 165.94 KiB | 9.22 MiB/s, done.
+Total 6 (delta 3), reused 0 (delta 0)
+To /tmp/python-git-mission.b5iE4l/practice.git
+   d94fdec..31ca264  main -> main
+$ git -C /root/Python_Git pull --ff-only "$PWD/practice.git" main
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (5/5), done.
+remote: Total 6 (delta 3), reused 0 (delta 0)
+Unpacking objects: 100% (6/6), 165.92 KiB | 13.83 MiB/s, done.
+From /tmp/python-git-mission.b5iE4l/practice
+ * branch            main       -> FETCH_HEAD
+Updating d94fdec..31ca264
+Fast-forward
+ README.md                      |   2 ++
+ docs/screenshots/git_graph.png | Bin 0 -> 173783 bytes
+ 2 files changed, 2 insertions(+)
+ create mode 100644 docs/screenshots/git_graph.png
+$ git -C Python_Git rev-parse --short HEAD
+31ca264
+$ git -C /root/Python_Git rev-parse --short HEAD
+31ca264
+$
+```
