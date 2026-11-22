@@ -98,6 +98,19 @@ class QuizGame:
         print(f"퀴즈를 추가했습니다. 현재 {len(self.quizzes)}개입니다.")
         self.save_state()
 
+    def delete_quiz(self) -> None:
+        self.list_quizzes()
+        if not self.quizzes:
+            return
+        number = read_number("삭제할 문제 번호 (0=취소): ", 0, len(self.quizzes))
+        if number == 0:
+            print("삭제를 취소했습니다.")
+            return
+        removed = self.quizzes.pop(number - 1)
+        self.dirty = True
+        print(f"삭제했습니다: {removed.question}")
+        self.save_state()
+
     def ask_question(self, quiz: Quiz) -> tuple[bool, bool]:
         quiz.display()
         used_hint = False
@@ -153,11 +166,12 @@ class QuizGame:
         print("2. 퀴즈 추가")
         print("3. 퀴즈 목록")
         print("5. 종료")
+        print("6. 퀴즈 삭제")
 
     def start(self) -> None:
         while True:
             self.show_menu()
-            choice = read_number("메뉴 선택: ", 1, 5)
+            choice = read_number("메뉴 선택 (1~6): ", 1, 6)
             if choice == 1:
                 self.play()
             elif choice == 2:
@@ -166,6 +180,8 @@ class QuizGame:
                 self.list_quizzes()
             elif choice == 5:
                 return
+            elif choice == 6:
+                self.delete_quiz()
             else:
                 print("메뉴에서 번호를 선택해 주세요.")
 
