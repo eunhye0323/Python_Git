@@ -1,3 +1,4 @@
+import random
 from dataclasses import asdict
 from pathlib import Path
 
@@ -78,16 +79,45 @@ class QuizGame:
         for number, quiz in enumerate(self.quizzes, start=1):
             print(f"  {number}. {quiz.question}")
 
+    def play(self) -> None:
+        if not self.quizzes:
+            print("풀 수 있는 퀴즈가 없습니다. 먼저 퀴즈를 추가해 주세요.")
+            return
+        available = len(self.quizzes)
+        count = read_number(f"풀 문제 수 (1~{available}): ", 1, available)
+        selected = random.sample(self.quizzes, count)
+        correct = 0
+        for index, quiz in enumerate(selected, start=1):
+            print(f"\n[문제 {index}/{count}]")
+            quiz.display()
+            answer = read_number("정답 번호 (1~4): ", 1, 4)
+            if quiz.check_answer(answer):
+                correct += 1
+                print("정답입니다!")
+            else:
+                print(f"오답입니다. 정답은 {quiz.answer}번 ({quiz.choices[quiz.answer - 1]})입니다.")
+
+        score = round(100 * correct / count)
+        print(f"\n결과: {count}문제 중 {correct}문제 정답 · {score}점")
+        if self.best_score is None or score > self.best_score:
+            self.best_score = score
+            print("새로운 최고 점수입니다!")
+            self.dirty = True
+            self.save_state()
+
     def show_menu(self) -> None:
         print("\n기술 퀴즈 | 메뉴")
+        print("1. 퀴즈 풀기")
         print("3. 퀴즈 목록")
         print("5. 종료")
 
     def start(self) -> None:
         while True:
             self.show_menu()
-            choice = read_number("메뉴 선택: ", 3, 5)
-            if choice == 3:
+            choice = read_number("메뉴 선택: ", 1, 5)
+            if choice == 1:
+                self.play()
+            elif choice == 3:
                 self.list_quizzes()
             elif choice == 5:
                 return
