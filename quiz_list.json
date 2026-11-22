@@ -1,0 +1,53 @@
+[
+  {
+    "question": "Agentic AI의 핵심 특징으로 가장 적절한 것은?",
+    "options": [
+      "사전에 정의된 규칙에 따라서만 동작하는 자동화 구조",
+      "목표가 주어지면 계획-실행-검증을 반복하는 자율 실행 구조",
+      "사람의 감독 없이 완전히 독립적으로 운영되는 구조",
+      "단일 프롬프트로 코드를 생성하는 구조"
+    ],
+    "answer": "목표가 주어지면 계획-실행-검증을 반복하는 자율 실행 구조"
+  },
+  {
+    "question": "기존 AIDD(AI-Driven Development)와 비교한 AI-Native Software Engineering의 차이로 옳은 것은?",
+    "options": [
+      "테스트 자동화 단계에만 AI를 적용한다",
+      "요구사항 정의부터 배포·운영까지 SDLC(Software Development Life Cycle) 전 과정을 포괄한다",
+      "개발자를 완전히 대체하는 것을 목표로 한다",
+      "설계 단계에서만 AI를 보조 도구로 사용한다"
+    ],
+    "answer": "요구사항 정의부터 배포·운영까지 SDLC(Software Development Life Cycle) 전 과정을 포괄한다"
+  },
+  {
+    "question": "Sim2Real에서 시뮬레이션과 현실 사이의 물리적 차이를 줄이기 위해 마찰·질량·조명 등 환경 조건을 무작위로 바꾸는 기법은?",
+    "options": [
+      "Retargeting",
+      "Teleoperation",
+      "Domain Randomization",
+      "Fine-tuning"
+    ],
+    "answer": "Domain Randomization"
+  },
+  {
+    "question": "AI Agent 시대에 스테이블코인이 구현하는 핵심 금융 인프라로 기대되는 'Programmable money'의 정의로 옳은 것은?",
+    "options": [
+      "중앙은행만 발행할 수 있는 디지털 화폐",
+      "가치를 저장하는 기능만 가진 디지털 자산",
+      "사전에 정의된 조건이 충족되면 자동으로 결제·정산이 실행되는 디지털 화폐",
+      "가격 변동성이 큰 투자용 가상자산"
+    ],
+    "answer": "사전에 정의된 조건이 충족되면 자동으로 결제·정산이 실행되는 디지털 화폐"
+  },
+  {
+    "question": "양자 컴퓨팅 본격 상용화의 분기점이 될 것으로 전망되는 것은?",
+    "options": [
+      "큐비트 수를 1,000개 이상으로 늘리는 것",
+      "QKD(Quantum Key Distribution) 통신망 완성",
+      "QaaS(Quantum-as-a-Service) 가격 인하",
+      "Fault-Tolerant(오류 보정이 적용된 내결함성) 양자 컴퓨터 확보",
+      "고전 컴퓨터의 완전한 대체"
+    ],
+    "answer": "Fault-Tolerant(오류 보정이 적용된 내결함성) 양자 컴퓨터 확보"
+  }
+]
