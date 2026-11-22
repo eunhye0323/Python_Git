@@ -6,6 +6,8 @@
 - 한 판에 풀 문제 수를 정하고, 모르는 문제에서는 힌트를 열 수 있음
 - 직접 등록한 문제와 플레이 기록은 다음 실행에서도 이어짐
 
+[코드 설계](#코드-구조와-설계-이유) · [요구사항별 수정 위치](#요구사항이-바뀔-때-수정할-곳) · [데이터 저장과 복구](#데이터-파일) · [동시 저장 테스트](#동시-저장-검증) · [Git 이력](#git-저장소)
+
 ## 퀴즈 주제 선정 이유
 
 - AI 에이전트, AI 기반 소프트웨어 개발, 로봇 시뮬레이션, 프로그래머블 머니, 양자 컴퓨팅을 한 문제씩 다룸
@@ -23,12 +25,24 @@ python quiz_game.py
 
 - 같은 폴더에서 `python -m unittest -v`로 테스트 실행
 - 테스트용 게임 데이터는 임시 폴더에 생성
+- 첫 실행 후 메뉴 `3`을 선택하면 `등록된 퀴즈 목록 (총 5개)`로 기본 문항 수 확인. 정상 저장 파일로 다시 시작하면 추가·삭제가 반영된 개수를 자동으로 표시
+- 기본 문항만 검사하려면 프로젝트 폴더의 Python에서 아래 예시 실행. `decode_quizzes()`가 각 문제의 선택지 네 개와 정답 범위를 검증하며, 현재 배포본의 출력은 `기본 퀴즈 5개`
+
+```python
+from quiz_game import SEED_FILE
+from quiz_storage import decode_quizzes, read_json
+
+quizzes = decode_quizzes(read_json(SEED_FILE))
+print(f"기본 퀴즈 {len(quizzes)}개")
+```
 
 ## 기능 목록
 
+- 메뉴에서 현재 문제 수는 `3`, 점수와 기록은 `4`로 확인. 풀이 중 `h`는 힌트, 삭제할 문제를 고를 때 `0`은 취소
+
 - **1. 퀴즈 풀기**
 
-  - 원하는 문제 수를 고르면 한 판에서 중복 없이 무작위로 출제
+  - 선택 직후 `풀 문제 수 (1~5):`처럼 현재 풀 수 있는 범위 표시. 원하는 문제 수를 고르면 한 판에서 중복 없이 무작위로 출제
   - `1`~`4` 중 하나로 답하면 정답을 바로 확인할 수 있음
 
 - **2. 퀴즈 추가**
@@ -67,8 +81,12 @@ python quiz_game.py
 ### 입력과 중단 처리
 
 - 숫자 입력은 앞뒤 공백을 제거한 뒤 검사
-- 빈 입력, 문자, 범위 밖 번호는 같은 단계에서 다시 입력 가능
+- 메뉴에 빈 입력, `abc`, `9`를 넣으면 `1~6 사이의 숫자를 입력해 주세요.`가 표시됨. 같은 프롬프트에 `3`을 입력하면 목록 조회
+- 정답 번호에 `0`을 넣으면 `1~4 사이의 숫자를 입력해 주세요.`가 표시됨. 예를 들어 두 번째 선택지는 `2`로 입력
+- 문제·선택지가 공백이면 `내용을 한 글자 이상 입력해 주세요.`가 표시되고 해당 항목을 다시 입력
 - `Ctrl+C`나 입력 종료(EOF)로 중단하면 작성 중인 문제와 미완주 회차는 기록에서 제외
+- 메뉴 `5`로 종료하거나 입력이 중단되면 `main()`이 마지막으로 `save_state()`를 한 번 호출. 저장할 변경(`dirty`)이 있고 쓰기가 허용된 경우(`can_save`)에만 디스크에 반영
+- 직전 쓰기가 실패한 변경은 다음 추가·삭제·완주 또는 종료 시 재시도. 마지막 저장도 실패하거나 그때 다시 `Ctrl+C`를 누르면 안내 후 종료되며 미저장 변경은 메모리와 함께 사라짐
 
 ## 파일 구조
 
@@ -85,11 +103,44 @@ Python_Git/
 └── README.md
 ```
 
+## 코드 구조와 설계 이유
+
+### 객체지향을 선택한 이유
+
+- **`Quiz`는 문제 한 개를 표현하는 데이터 클래스.** 문제, 선택지, 정답 번호, 힌트가 한 객체에 속하므로 같은 문제를 출력하고 채점할 때 같은 선택지와 정답을 사용. `from_dict()`는 저장 항목 검증·변환, `display()`는 번호가 붙은 선택지 출력, `check_answer()`는 선택 번호의 정답 여부 반환
+- **`QuizGame`은 한 실행의 상태와 진행을 담당.** `show_menu()`·`start()`는 메뉴 표시·선택, `play()`·`ask_question()`은 출제·응답, `finish_round()`·`show_scores()`는 완주 기록·점수 조회를 담당. `add_quiz()`·`delete_quiz()`·`list_quizzes()`는 같은 목록을 사용하고, `load_state()`·`save_state()`는 그 세션의 저장 상태를 관리
+- **함수만으로 구현할 때의 장단점.** 한 번의 정답 판정처럼 입력과 반환값이 분명한 작업은 직접 호출하고 테스트하기 쉬움. 메뉴 전체를 함수로 연결하면 문제 목록, 최고 점수, 기록, 마지막 저장 상태를 호출마다 전달하고 돌려받아야 함
+- **클래스를 사용할 때의 장단점.** 세션마다 `QuizGame(state_file)` 하나로 관련 상태를 묶고 두 세션을 독립적으로 생성할 수 있음. 반면 메서드의 결과가 이전 호출에 의존하므로 재시작·저장 테스트에서는 임시 경로와 새 인스턴스로 시작 상태를 구성
+
+### 입력 검증과 파일 입출력의 경계
+
+- `Quiz.check_answer()`, `decode_state()`, `validate_record()`는 문제와 입력값만으로 판정·검증하는 순수 로직. 터미널이나 파일 없이 결과 또는 예외를 테스트할 수 있음
+- `quiz_game.py`의 `parse_number()`는 공백 제거·정수 변환·범위 검사와 **실패 메시지 출력**까지 담당. 실제 키보드 입력과 재입력 반복은 `read_number()`·`read_text()`가 담당
+- `quiz_storage.py`의 `read_json()`·`write_json()`은 파일을 열고 읽거나 교체하는 입출력, `save_changes()`는 잠금과 병합을 담당. `QuizGame`은 언제 저장할지와 오류 발생 시 사용자에게 보여 줄 안내를 결정
+
+### 요구사항이 바뀔 때 수정할 곳
+
+| 바뀌는 요구사항 | 수정 파일과 주요 메서드·함수 | 함께 확인할 동작 |
+| --- | --- | --- |
+| 메뉴 번호·입력 규칙 | `quiz_game.py`의 `QuizGame.show_menu()`, `start()`, `parse_number()`, `read_number()` | 화면 번호, 허용 범위, 선택 후 동작, 잘못된 입력의 재입력 흐름 |
+| 기본 문제·선택지 수 | 문항 내용은 `quiz_list.json`. 선택지 수 변경은 `quiz.py`의 `Quiz.from_dict()`, `quiz_game.py`의 `QuizGame.add_quiz()`·`ask_question()` | 정답 번호와 입력 범위, 기존 4지선다 저장 파일 호환 |
+| 출제 순서·힌트·배점 | `quiz_game.py`의 `QuizGame.play()`, `ask_question()`, `finish_round()` | 중복 출제 여부, 같은 힌트 반복 시 차감 횟수, 0점·최고 점수 처리 |
+| 기록 필드·점수 화면 | `quiz_game.py`의 `QuizGame.finish_round()`·`show_scores()`, `quiz_storage.py`의 `validate_record()`·`decode_state()`·`encode_state()` | 새 필드의 검증·출력, 해당 필드가 없는 기존 파일 읽기 |
+| 저장 위치·백업·동시 저장 | `quiz_game.py`의 `STATE_FILE`과 `QuizGame.load_state()`·`save_state()`, `quiz_storage.py`의 `save_changes()`, `lock_state()`, `merge_changes()`, `write_json()` | 개인 파일의 Git 제외 규칙, 손상 복구, 쓰기 실패 후 재시도, 다른 세션의 기록 보존 |
+
+- 각 변경은 `test_quiz_game.py`의 해당 사례와 함께 검증. 배점 변경은 `test_hint_cost_best_and_history_across_restarts`, 저장 변경은 `test_interrupted_write_preserves_previous_file_and_can_retry`가 대표 사례
+
 ## 데이터 파일
 
 - `state.json`은 `quiz_game.py`와 같은 폴더에 UTF-8로 저장
 - 첫 실행이나 JSON 손상 시 `quiz_list.json`에서 기본 문제를 불러오고 최고 점수와 플레이 기록 초기화
 - 저장 파일을 읽을 권한이 없으면 안내 후 메모리에서 플레이 가능
+
+### JSON을 선택한 이유와 데이터 구조
+
+- **가독성과 이식성.** 편집기로 열어 한글 문제와 점수를 직접 확인할 수 있고, Python 표준 라이브러리 `json`으로 읽고 쓸 수 있음. 저장 시 `ensure_ascii=False`와 들여쓰기를 사용해 한글과 필드 경계가 그대로 보임
+- **중첩 구조의 이점.** `quizzes` 배열의 한 객체에 문제·선택지·정답·힌트를 모으면 한 문항을 읽어 곧바로 `Quiz`로 변환 가능. `history`에는 완주 당시의 집계값을 별도로 저장하므로 이후 문제를 삭제해도 과거 회차의 점수와 문제 수가 유지됨
+- **중첩 구조의 제약.** 선택지 번호는 해당 문제 안에서만 의미가 있고, 회차별 집계만으로는 과거에 어떤 문제를 틀렸는지 조회하기 어려움. 새 필드를 넣을 때는 이전 파일의 누락값 처리도 필요. 현재 `hint`의 기본값은 `""`, `history`의 기본값은 `[]`
 
 | 필드 | 형식과 의미 |
 | --- | --- |
@@ -104,11 +155,100 @@ Python_Git/
 - 같은 폴더의 임시 파일에 쓰기를 마친 뒤 `state.json` 교체
 - 여러 터미널에서 동시에 저장할 때는 `.state.lock`으로 쓰기 순서를 조정해 각 실행에서 추가한 문제와 점수 보존
 
+### 읽기·쓰기 순서
+
+```mermaid
+flowchart TD
+    A["시작 · state.json 읽기와 값 검증"] -->|정상| M["저장된 문제·점수·기록 복원"]
+    A -->|파일 없음 또는 데이터 손상| B["기본 문제 파일 읽기 · 점수와 기록 초기화"]
+    A -->|기타 읽기 오류| R["안내 후 이번 실행의 저장 비활성화"]
+    R --> B
+    B -->|기본 파일 정상| D["기본 문제로 시작 · 초기 상태 저장 요청"]
+    B -->|기본 파일 오류| E["안내 후 빈 목록으로 시작"]
+    M -->|추가·삭제·완주 또는 종료| W{"미저장 변경이 있고 저장 가능한가?"}
+    E -->|문제 추가| W
+    D --> W
+    W -->|아니요| K["메모리 상태 유지"]
+    W -->|예| L["잠금 획득 · 디스크 최신 상태 재조회"]
+    L --> H["마지막 저장 상태와 다르면 다른 세션의 변경과 병합"]
+    H --> T["같은 폴더에 임시 파일 쓰기"]
+    T --> F["state.json 교체 · 잠금 해제 · 저장 상태 갱신"]
+```
+
+- 저장 직전 파일이 없거나 손상됐으면 `last_saved`를 비교 기준으로 사용. 다른 세션의 정상 변경이 있으면 문제의 추가·삭제분과 새 회차를 합치고 더 높은 최고 점수를 보존
+
+### 단일 JSON 파일의 성능·메모리 한계
+
+- **전체 읽기와 쓰기.** 회차 하나를 추가해도 최신 `state.json` 전체를 다시 읽고 검증한 뒤 전체 상태를 직렬화해 교체. 파일 크기가 `B`바이트일 때 회차 한 건을 추가하는 파일 입출력 비용은 `O(B)`
+- **메모리와 공간.** 퀴즈와 모든 기록을 메모리에 올리고, 저장하는 동안 이전·현재·최신 상태 사본도 함께 사용. 기록이 쌓이면 시작 시간과 메모리 사용량이 늘고, 교체 전에는 기존 파일과 새 임시 파일을 둘 디스크 공간이 필요
+- **검색과 동시 쓰기.** 날짜별 기록 검색에는 배열 순회가 필요하고, 여러 세션은 쓰기 잠금을 차례로 획득. 기록이 많아져 조회·저장 지연이 문제가 되면 SQLite에서 회차를 행 단위로 추가하고 완료 시각에 인덱스를 두는 방법을 고려할 수 있음
+
+### 오류별 대응과 백업 복원
+
+| 터미널 안내 | 가능한 원인 | 사용자 조치 |
+| --- | --- | --- |
+| `저장 파일을 읽을 수 없습니다.` | 읽기 권한 부족, `state.json` 경로가 디렉터리인 경우 | 파일 종류와 읽기 권한 확인. 이 실행은 메모리 전용이므로 문제를 해결한 뒤 다시 실행 |
+| `저장하지 못했습니다.` | 디스크 공간 부족, 프로젝트 폴더나 잠금 파일에 대한 쓰기 권한 부족 | 같은 세션에서 공간과 권한을 확보한 뒤 다음 변경 또는 종료 시 재시도. 임시 파일 교체에 실패하면 직전 저장본 유지 |
+| `저장 데이터가 손상되었습니다.` | 잘못된 UTF-8·JSON, 정답 번호나 기록 필드가 범위를 벗어남 | 기본 문제와 빈 기록으로 복구. 기존 플레이 기록이 필요하면 아래 절차로 사고 이전 정상본 복원 |
+| `기본 퀴즈를 읽을 수 없습니다.` | `quiz_list.json` 누락 또는 형식 오류 | 빈 목록으로 시작하므로 저장소의 기본 파일과 대조해 복구하고 다시 실행 |
+
+- **자동 보존 정책.** 손상 원본의 자동 백업과 복구 로그 파일은 각각 0개이며 자동 보관 경로·기간은 없음. 복구 안내는 터미널에 출력되고, 기본값 저장이 성공하면 기존 `state.json`이 교체됨
+- **수동 보관 예시.** 정상 종료 후 저장소 밖 `../Python_Git-backups/`에 `state-<UTC시각>.json`으로 복사. 손상본과 복구 기록도 같은 폴더에 보관할 수 있음. 보관 기간 예시는 30일이며 직접 정리하고, 마지막으로 검증한 정상본은 다음 정상본을 확인할 때까지 보관
+
+1. 손상이 의심되면 재실행 전에 현재 파일을 `damaged-<UTC시각>.json`으로 복사해 원본을 확보
+2. 실행 중인 게임을 모두 종료한 뒤 사고 이전 백업을 선택. 프로젝트 폴더의 Python에서 아래처럼 검사해 문항 수·최고 점수·기록 수 확인
+3. 검증을 통과한 백업을 프로젝트 루트의 `state.json`으로 복사. 재실행 후 메뉴 `3`·`4`에서 확인하고 복구 시각, 오류 문구, 사용한 백업 이름과 결과를 `recovery-<UTC시각>.log`에 수동 기록
+
+```python
+from pathlib import Path
+from quiz_storage import decode_state, read_json
+
+backup = Path("../Python_Git-backups/state-20261122T120000Z.json")  # 선택한 백업 경로
+quizzes, best, history = decode_state(read_json(backup))
+print(f"문제 {len(quizzes)}개, 최고 점수 {best}, 기록 {len(history)}회")
+```
+
+## 동시 저장 검증
+
+- 기존 단위 테스트는 두 세션이 같은 상태를 읽은 뒤 한쪽에서 문제를 추가하고 다른 쪽에서 기존 문제를 삭제하는 상황을 재현. 최종 문제 목록, 두 회차의 점수 `[100, 0]`, 최고 점수 `100`을 확인
+- 실행 명령은 `python -m unittest -v test_quiz_game.QuizGameTests.test_two_sessions_keep_each_others_questions_and_scores`
+- 아래 추가 테스트는 임시 폴더에서 두 세션을 각각 다른 스레드로 실행. 둘 다 읽기를 끝낸 시점에 함께 완주시키고, 저장 순서와 관계없이 **0점과 100점이 한 번씩** 남는지 검사. 프로젝트 루트에서 `python -m doctest README.md`로 실행
+
+```pycon
+>>> from concurrent.futures import ThreadPoolExecutor
+>>> from contextlib import redirect_stdout
+>>> from io import StringIO
+>>> from pathlib import Path
+>>> from tempfile import TemporaryDirectory
+>>> from threading import Barrier
+>>> from quiz_game import QuizGame
+>>> from quiz_storage import read_json
+>>> def finish(path, ready, correct):
+...     game = QuizGame(path)
+...     game.load_state()
+...     ready.wait(timeout=10)
+...     game.finish_round(1, correct, 0)
+>>> with TemporaryDirectory() as folder, redirect_stdout(StringIO()):
+...     path = Path(folder) / "state.json"
+...     ready = Barrier(2)
+...     with ThreadPoolExecutor(max_workers=2) as pool:
+...         first = pool.submit(finish, path, ready, 1)
+...         second = pool.submit(finish, path, ready, 0)
+...         first.result()
+...         second.result()
+...     saved = read_json(path)
+>>> sorted(row["score"] for row in saved["history"]), saved["best_score"]
+([0, 100], 100)
+
+```
+
 ## 실행 화면
+
+- 아래 시각은 2026-11-22 UTC 기준 원본 터미널 로그 기록 시각
 
 ### 개발 환경 및 시작
 
-[Python·Git 설정](docs/screenshots/environment.png)
+12:12:20 · Python 3.10.20, Git 2.25.1과 작업 브랜치 `main` 확인. [Python·Git 설정](docs/screenshots/environment.png)
 
 ```text
 Python_Git $ python --version
@@ -124,7 +264,7 @@ eunhye0323
 Python_Git $
 ```
 
-[첫 실행 메뉴](docs/screenshots/menu.png)
+12:12:18 · 기본 퀴즈를 불러온 뒤 번호 1~6 메뉴 표시. [첫 실행 메뉴](docs/screenshots/menu.png)
 
 ```text
 Python_Git $ python quiz_game.py
@@ -142,7 +282,7 @@ Python_Git $ python quiz_game.py
 
 ### 문제 등록 및 조회
 
-[퀴즈 추가](docs/screenshots/add_quiz.png)
+12:12:19 · 정답이 `git merge`인 문제를 등록해 총 6개로 증가. [퀴즈 추가](docs/screenshots/add_quiz.png)
 
 ```text
 메뉴 선택 (1~6): 2
@@ -158,7 +298,7 @@ Python_Git $ python quiz_game.py
 퀴즈를 추가했습니다. 현재 6개입니다.
 ```
 
-[추가 후 목록](docs/screenshots/list.png)
+12:12:20 · 새 문제가 목록 6번에 표시됨. [추가 후 목록](docs/screenshots/list.png)
 
 ```text
 메뉴 선택 (1~6): 3
@@ -174,7 +314,7 @@ Python_Git $ python quiz_game.py
 
 ### 힌트 사용 및 점수 유지
 
-[힌트를 사용한 풀이](docs/screenshots/play.png)
+12:12:20 · 힌트 1회 사용 후 정답을 골라 50점 획득. [힌트를 사용한 풀이](docs/screenshots/play.png)
 
 ```text
 메뉴 선택 (1~6): 1
@@ -196,7 +336,7 @@ Python_Git $ python quiz_game.py
 새로운 최고 점수입니다!
 ```
 
-[재실행 후 최고 점수와 기록](docs/screenshots/score.png)
+12:12:20 · 게임을 다시 열어 최고 50점과 완주 기록 2회 확인. [재실행 후 최고 점수와 기록](docs/screenshots/score.png)
 
 ```text
 메뉴 선택 (1~6): 4
@@ -209,11 +349,38 @@ Python_Git $ python quiz_game.py
 
 ## Git 저장소
 
-- `feature/quiz-play` 브랜치에서 무작위 출제와 힌트 채점 구현 후 `main`에 병합
 - 프로젝트의 GitHub 저장소 [eunhye0323/Python_Git](https://github.com/eunhye0323/Python_Git)
-- 별도 로컬 저장소를 복제한 뒤 복제본에서 브랜치 병합 그래프를 추가해 커밋
 
-[기능별 커밋과 브랜치 병합 그래프](docs/screenshots/git_graph.png)
+### 커밋 단위와 메시지 규칙
+
+- **커밋 단위**는 독립적으로 검증하거나 되돌릴 수 있는 변경 한 가지. 예를 들어 무작위 출제와 힌트 감점은 각각 한 커밋으로 작성. 같은 결함을 고치는 구현과 회귀 테스트는 함께 담을 수 있고, 관련 없는 문항·문서 수정은 별도 커밋으로 분리
+- **메시지 형식**은 `유형: 변경 내용`. 유형 뒤에 콜론과 공백 하나를 쓰고, 한 줄 제목에 어떤 동작을 추가하거나 고쳤는지 한국어로 명시
+- **유형**은 새 기능 `Feat`, 결함 수정 `Fix`, 테스트 `Test`, 문서 `Docs`, 기본 데이터 `Data`, 설정·정리 `Chore`, 브랜치 통합 `Merge` 사용
+- **실제 예**는 `02452cb`의 `Feat: 문제별 힌트를 열고 최초 사용 한 번만 점수에서 차감`, `9b6a025`의 `Fix: 여러 실행에서 추가한 문제와 점수 기록을 저장할 때 함께 보존`
+
+### 원격 저장소 커밋 수
+
+- 2026-11-22 12:50:09 UTC에 갱신된 원격 추적 브랜치 `origin/main`의 스냅샷. `ada4647`까지의 **총 커밋 19개**에 병합 커밋 1개와 병합된 기능 커밋이 포함됨. 당시 `origin`의 모든 추적 브랜치에서 중복을 제외한 수도 19개
+- 이후 브랜치가 이동해도 `git rev-list --count ada4647`로 같은 시점의 집계를 재현할 수 있음
+
+```text
+$ git rev-parse --short origin/main
+ada4647
+$ git rev-list --count origin/main
+19
+$ git rev-list --count --remotes=origin
+19
+$ git rev-list --count --merges origin/main
+1
+```
+
+### 브랜치 분리와 병합
+
+- **`main`**은 실행 가능한 게임과 검증·제출 문서를 모으는 기준 브랜치
+- **`feature/quiz-play`**는 한 판의 무작위 출제·문제 수 선택과 힌트 채점을 개발한 브랜치. 같은 풀이 흐름을 바꾸는 두 작업을 기본 메뉴·저장 기능과 독립적으로 검토할 수 있도록 분리
+- **병합 시 확인할 점**은 선택한 수만큼 중복 없이 출제되는지, 힌트를 반복해도 한 번만 차감되는지, 결과가 최고 점수·기록과 일치하는지임. 기능을 `main`에 `--no-ff`로 병합해 두 개발 경로가 합쳐진 지점을 `16239ed`로 남김
+
+2026-11-22 12:15:22 UTC · 실습용 로컬 복제본에서 출제·힌트 커밋 두 개가 `16239ed`로 병합된 그래프를 캡처. [기능별 커밋과 브랜치 병합 그래프](docs/screenshots/git_graph.png)
 
 ```text
 Python_Git $ git log --oneline --graph --decorate --all
@@ -237,11 +404,14 @@ Python_Git $ git log --oneline --graph --decorate --all
 Python_Git $
 ```
 
+### 로컬 복제와 동기화 실습
+
+- 별도 로컬 저장소를 `clone`한 뒤 복제본에서 브랜치 병합 그래프를 추가하고 커밋
 - 복제본에서 실습용 로컬 저장소로 커밋을 `push`
 - 원래 폴더에서 `git pull --ff-only`로 해당 커밋을 가져옴
 - 동기화 직후 두 폴더의 커밋이 모두 `31ca264`임을 확인
 
-[clone부터 pull까지의 터미널 기록](docs/screenshots/git_workflow.png)
+2026-11-22 12:16:08 UTC · 로컬 `pull --ff-only` 직후 양쪽에서 확인한 커밋은 모두 `31ca264`. [clone부터 pull까지의 터미널 기록](docs/screenshots/git_workflow.png)
 
 ```text
 $ git clone --branch main practice.git Python_Git
