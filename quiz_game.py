@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import random
-from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 
 from quiz import Quiz
-from quiz_storage import decode_quizzes, decode_state, read_json, write_json
+from quiz_storage import decode_quizzes, decode_state, encode_state, read_json, save_changes
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -45,6 +46,7 @@ class QuizGame:
         self.quizzes: list[Quiz] = []
         self.best_score: int | None = None
         self.history: list[dict] = []
+        self.last_saved = encode_state(self.quizzes, self.best_score, self.history)
         self.dirty = False
         self.can_save = True
 
@@ -59,30 +61,33 @@ class QuizGame:
             self.can_save = False
             print(f"저장 파일을 읽을 수 없습니다. 이번 실행의 변경은 메모리에만 유지됩니다. ({error})")
         else:
+            self.last_saved = encode_state(self.quizzes, self.best_score, self.history)
             print(f"저장된 퀴즈 {len(self.quizzes)}개를 불러왔습니다.")
             return
 
+        self.best_score = None
+        self.history = []
+        self.quizzes = []
         try:
             self.quizzes = decode_quizzes(read_json(SEED_FILE))
         except (OSError, ValueError, RecursionError) as error:
             print(f"기본 퀴즈를 읽을 수 없습니다. 빈 목록으로 시작합니다. ({error})")
             return
+        self.last_saved = encode_state(self.quizzes, self.best_score, self.history)
         self.dirty = True
         self.save_state()
 
     def save_state(self) -> None:
         if not self.dirty or not self.can_save:
             return
-        data = {
-            "quizzes": [asdict(quiz) for quiz in self.quizzes],
-            "best_score": self.best_score,
-            "history": self.history,
-        }
+        current = encode_state(self.quizzes, self.best_score, self.history)
         try:
-            write_json(self.state_file, data)
+            saved = save_changes(self.state_file, self.last_saved, current)
         except (OSError, UnicodeError) as error:
             print(f"저장하지 못했습니다. ({error})")
         else:
+            self.last_saved = saved
+            self.quizzes, self.best_score, self.history = decode_state(saved)
             self.dirty = False
 
     def list_quizzes(self) -> None:
@@ -99,10 +104,10 @@ class QuizGame:
         choices = [read_text(f"선택지 {number}: ") for number in range(1, 5)]
         answer = read_number("정답 번호 (1~4): ", 1, 4)
         hint = input("힌트 (없으면 Enter): ").strip()
-        self.quizzes.append(Quiz(question, choices, answer, hint))
         self.dirty = True
-        print(f"퀴즈를 추가했습니다. 현재 {len(self.quizzes)}개입니다.")
+        self.quizzes.append(Quiz(question, choices, answer, hint))
         self.save_state()
+        print(f"퀴즈를 추가했습니다. 현재 {len(self.quizzes)}개입니다.")
 
     def delete_quiz(self) -> None:
         self.list_quizzes()
@@ -112,8 +117,8 @@ class QuizGame:
         if number == 0:
             print("삭제를 취소했습니다.")
             return
-        removed = self.quizzes.pop(number - 1)
         self.dirty = True
+        removed = self.quizzes.pop(number - 1)
         print(f"삭제했습니다: {removed.question}")
         self.save_state()
 
@@ -221,7 +226,10 @@ def main() -> None:
         game.start()
     except (EOFError, KeyboardInterrupt):
         print("\n입력이 중단되었습니다.")
-    game.save_state()
+    try:
+        game.save_state()
+    except KeyboardInterrupt:
+        print("\n마지막 저장이 중단되었습니다.")
     print("퀴즈 게임을 종료합니다.")
 
 

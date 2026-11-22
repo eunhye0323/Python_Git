@@ -1,4 +1,9 @@
+from __future__ import annotations
+
 import json
+import os
+from contextlib import contextmanager
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -43,7 +48,55 @@ def decode_state(data: dict) -> tuple[list[Quiz], int | None, list[dict]]:
         validate_record(record)
     if history:
         best = max(best or 0, max(record["score"] for record in history))
-    return decode_quizzes(data["quizzes"]), best, history
+    return decode_quizzes(data["quizzes"]), best, list(history)
+
+
+def encode_state(quizzes: list[Quiz], best: int | None, history: list[dict]) -> dict:
+    return {"quizzes": [asdict(quiz) for quiz in quizzes], "best_score": best, "history": list(history)}
+
+
+@contextmanager
+def lock_state(path: Path):
+    # 파일을 닫으면 운영체제가 잠금을 해제한다. 입력을 기다리는 동안에는 잠그지 않는다.
+    with path.with_name(f".{path.stem}.lock").open("a+b") as lock:
+        if os.name == "nt":
+            import msvcrt
+            lock.seek(0)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def merge_changes(latest: dict, previous: dict, current: dict) -> dict:
+    # 이 게임에서 퀴즈는 추가·삭제만 되고, 완주 기록은 끝에만 추가된다.
+    removed = previous["quizzes"].copy()
+    for quiz in current["quizzes"]:
+        if quiz in removed:
+            removed.remove(quiz)
+        else:
+            latest["quizzes"].append(quiz)
+    for quiz in removed:
+        if quiz in latest["quizzes"]:
+            latest["quizzes"].remove(quiz)
+    latest["history"].extend(current["history"][len(previous["history"]):])
+    best = current["best_score"]
+    if best is not None and (latest["best_score"] is None or best > latest["best_score"]):
+        latest["best_score"] = best
+    return latest
+
+
+def save_changes(path: Path, previous: dict, current: dict) -> dict:
+    with lock_state(path):
+        try:
+            latest = encode_state(*decode_state(read_json(path)))
+        except (FileNotFoundError, ValueError, RecursionError):
+            latest = previous
+        if latest != previous:
+            current = merge_changes(latest, previous, current)
+        write_json(path, current)
+    return current
 
 
 def write_json(path: Path, data: dict) -> None:

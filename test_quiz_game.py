@@ -136,6 +136,30 @@ class QuizGameTests(unittest.TestCase):
         self.assertIn("저장하지 못했습니다", stream.getvalue())
         self.assertEqual(len(self.read_state()["history"]), 1)
 
+    def test_two_sessions_keep_each_others_questions_and_scores(self):
+        self.seed_one()
+        first, second = QuizGame(self.state), QuizGame(self.state)
+        with redirect_stdout(StringIO()):
+            first.load_state()
+            second.load_state()
+            with patch("builtins.input", side_effect=["추가 문제", "가", "나", "다", "라", "1", ""]):
+                first.add_quiz()
+            with patch("builtins.input", return_value="1"):
+                second.delete_quiz()
+            first.finish_round(1, 1, 0)
+            second.finish_round(1, 0, 0)
+        state = self.read_state()
+        self.assertEqual([q["question"] for q in state["quizzes"]], ["추가 문제"])
+        self.assertEqual([r["score"] for r in state["history"]], [100, 0])
+        self.assertEqual(state["best_score"], 100)
+
+    def test_unreadable_state_starts_without_overwriting_it(self):
+        self.state.mkdir()
+        output = self.run_game("3", "5")
+        self.assertIn("저장 파일을 읽을 수 없습니다.", output)
+        self.assertIn("총 5개", output)
+        self.assertTrue(self.state.is_dir())
+
 
 if __name__ == "__main__":
     unittest.main()

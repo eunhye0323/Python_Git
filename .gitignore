@@ -1,4 +1,5 @@
 __pycache__/
 *.py[cod]
 /state.json
+/.state.lock
 /.state-*.tmp
