@@ -79,6 +79,28 @@ class QuizGame:
         for number, quiz in enumerate(self.quizzes, start=1):
             print(f"  {number}. {quiz.question}")
 
+    def ask_question(self, quiz: Quiz) -> tuple[bool, bool]:
+        quiz.display()
+        used_hint = False
+        while True:
+            text = input("정답 번호 (1~4, h=힌트): ").strip()
+            if text.lower() in ("h", "힌트"):
+                if quiz.hint:
+                    print(f"힌트: {quiz.hint}")
+                    used_hint = True
+                else:
+                    print("등록된 힌트가 없습니다. 점수 차감은 없습니다.")
+                continue
+            answer = parse_number(text, 1, 4)
+            if answer is not None:
+                break
+        correct = quiz.check_answer(answer)
+        if correct:
+            print("정답입니다!")
+        else:
+            print(f"오답입니다. 정답은 {quiz.answer}번 ({quiz.choices[quiz.answer - 1]})입니다.")
+        return correct, used_hint
+
     def play(self) -> None:
         if not self.quizzes:
             print("풀 수 있는 퀴즈가 없습니다. 먼저 퀴즈를 추가해 주세요.")
@@ -86,19 +108,20 @@ class QuizGame:
         available = len(self.quizzes)
         count = read_number(f"풀 문제 수 (1~{available}): ", 1, available)
         selected = random.sample(self.quizzes, count)
+        print("정답은 2점, 힌트를 열면 문제당 한 번 1점 차감합니다. 결과는 100점으로 환산합니다.")
         correct = 0
+        hints_used = 0
         for index, quiz in enumerate(selected, start=1):
             print(f"\n[문제 {index}/{count}]")
-            quiz.display()
-            answer = read_number("정답 번호 (1~4): ", 1, 4)
-            if quiz.check_answer(answer):
-                correct += 1
-                print("정답입니다!")
-            else:
-                print(f"오답입니다. 정답은 {quiz.answer}번 ({quiz.choices[quiz.answer - 1]})입니다.")
+            is_correct, used_hint = self.ask_question(quiz)
+            correct += is_correct
+            hints_used += used_hint
+        self.finish_round(count, correct, hints_used)
 
-        score = round(100 * correct / count)
-        print(f"\n결과: {count}문제 중 {correct}문제 정답 · {score}점")
+    def finish_round(self, count: int, correct: int, hints_used: int) -> None:
+        points = max(0, 2 * correct - hints_used)
+        score = round(100 * points / (2 * count))
+        print(f"\n결과: {count}문제 중 {correct}문제 정답 · 힌트 {hints_used}회 · {score}점")
         if self.best_score is None or score > self.best_score:
             self.best_score = score
             print("새로운 최고 점수입니다!")
