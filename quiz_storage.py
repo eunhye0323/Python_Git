@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -16,13 +17,33 @@ def decode_quizzes(items: list) -> list[Quiz]:
     return [Quiz.from_dict(item) for item in items]
 
 
-def decode_state(data: dict) -> tuple[list[Quiz], int | None]:
+def validate_record(record: dict) -> None:
+    if not isinstance(record, dict) or not isinstance(record.get("played_at"), str):
+        raise ValueError("게임 기록에 날짜와 시간이 필요합니다.")
+    datetime.fromisoformat(record["played_at"])
+    total = record.get("total")
+    if type(total) is not int or total < 1:
+        raise ValueError("게임 기록의 문제 수는 양의 정수여야 합니다.")
+    for key, maximum in (("correct", total), ("hints_used", total), ("score", 100)):
+        value = record.get(key)
+        if type(value) is not int or not 0 <= value <= maximum:
+            raise ValueError(f"게임 기록의 {key} 값이 범위를 벗어났습니다.")
+
+
+def decode_state(data: dict) -> tuple[list[Quiz], int | None, list[dict]]:
     if not isinstance(data, dict) or "quizzes" not in data or "best_score" not in data:
         raise ValueError("quizzes 또는 best_score 필드가 없습니다.")
     best = data["best_score"]
     if best is not None and (type(best) is not int or not 0 <= best <= 100):
         raise ValueError("최고 점수는 0~100 사이의 정수여야 합니다.")
-    return decode_quizzes(data["quizzes"]), best
+    history = data.get("history", [])
+    if not isinstance(history, list):
+        raise ValueError("게임 기록은 배열이어야 합니다.")
+    for record in history:
+        validate_record(record)
+    if history:
+        best = max(best or 0, max(record["score"] for record in history))
+    return decode_quizzes(data["quizzes"]), best, history
 
 
 def write_json(path: Path, data: dict) -> None:

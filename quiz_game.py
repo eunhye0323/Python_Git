@@ -1,5 +1,6 @@
 import random
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 
 from quiz import Quiz
@@ -43,12 +44,13 @@ class QuizGame:
         self.state_file = state_file
         self.quizzes: list[Quiz] = []
         self.best_score: int | None = None
+        self.history: list[dict] = []
         self.dirty = False
         self.can_save = True
 
     def load_state(self) -> None:
         try:
-            self.quizzes, self.best_score = decode_state(read_json(self.state_file))
+            self.quizzes, self.best_score, self.history = decode_state(read_json(self.state_file))
         except FileNotFoundError:
             print("첫 실행입니다. 기본 퀴즈를 불러옵니다.")
         except (ValueError, RecursionError) as error:
@@ -71,7 +73,11 @@ class QuizGame:
     def save_state(self) -> None:
         if not self.dirty or not self.can_save:
             return
-        data = {"quizzes": [asdict(quiz) for quiz in self.quizzes], "best_score": self.best_score}
+        data = {
+            "quizzes": [asdict(quiz) for quiz in self.quizzes],
+            "best_score": self.best_score,
+            "history": self.history,
+        }
         try:
             write_json(self.state_file, data)
         except (OSError, UnicodeError) as error:
@@ -157,14 +163,36 @@ class QuizGame:
         if self.best_score is None or score > self.best_score:
             self.best_score = score
             print("새로운 최고 점수입니다!")
-            self.dirty = True
-            self.save_state()
+        self.history.append({
+            "played_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+            "total": count,
+            "correct": correct,
+            "hints_used": hints_used,
+            "score": score,
+        })
+        self.dirty = True
+        self.save_state()
+
+    def show_scores(self) -> None:
+        if self.best_score is None:
+            print("아직 퀴즈를 끝까지 푼 기록이 없습니다.")
+            return
+        print(f"\n최고 점수: {self.best_score}점")
+        if not self.history:
+            print("회차별 기록이 없습니다.")
+            return
+        print(f"플레이 기록 {len(self.history)}회 (최근 순)")
+        for record in reversed(self.history):
+            when = record["played_at"].replace("T", " ", 1)
+            print(f"  {when} | {record['total']}문제 중 {record['correct']}문제 정답"
+                  f" | 힌트 {record['hints_used']}회 | {record['score']}점")
 
     def show_menu(self) -> None:
         print("\n기술 퀴즈 | 메뉴")
         print("1. 퀴즈 풀기")
         print("2. 퀴즈 추가")
         print("3. 퀴즈 목록")
+        print("4. 최고 점수와 플레이 기록")
         print("5. 종료")
         print("6. 퀴즈 삭제")
 
@@ -178,12 +206,12 @@ class QuizGame:
                 self.add_quiz()
             elif choice == 3:
                 self.list_quizzes()
+            elif choice == 4:
+                self.show_scores()
             elif choice == 5:
                 return
-            elif choice == 6:
-                self.delete_quiz()
             else:
-                print("메뉴에서 번호를 선택해 주세요.")
+                self.delete_quiz()
 
 
 def main() -> None:
