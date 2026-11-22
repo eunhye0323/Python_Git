@@ -30,6 +30,14 @@ def read_number(prompt: str, minimum: int, maximum: int) -> int:
             return number
 
 
+def read_text(prompt: str) -> str:
+    while True:
+        text = input(prompt).strip()
+        if text:
+            return text
+        print("내용을 한 글자 이상 입력해 주세요.")
+
+
 class QuizGame:
     def __init__(self, state_file: Path = STATE_FILE):
         self.state_file = state_file
@@ -78,6 +86,17 @@ class QuizGame:
         print(f"\n등록된 퀴즈 목록 (총 {len(self.quizzes)}개)")
         for number, quiz in enumerate(self.quizzes, start=1):
             print(f"  {number}. {quiz.question}")
+
+    def add_quiz(self) -> None:
+        print("\n새 퀴즈 등록")
+        question = read_text("문제: ")
+        choices = [read_text(f"선택지 {number}: ") for number in range(1, 5)]
+        answer = read_number("정답 번호 (1~4): ", 1, 4)
+        hint = input("힌트 (없으면 Enter): ").strip()
+        self.quizzes.append(Quiz(question, choices, answer, hint))
+        self.dirty = True
+        print(f"퀴즈를 추가했습니다. 현재 {len(self.quizzes)}개입니다.")
+        self.save_state()
 
     def ask_question(self, quiz: Quiz) -> tuple[bool, bool]:
         quiz.display()
@@ -131,6 +150,7 @@ class QuizGame:
     def show_menu(self) -> None:
         print("\n기술 퀴즈 | 메뉴")
         print("1. 퀴즈 풀기")
+        print("2. 퀴즈 추가")
         print("3. 퀴즈 목록")
         print("5. 종료")
 
@@ -140,6 +160,8 @@ class QuizGame:
             choice = read_number("메뉴 선택: ", 1, 5)
             if choice == 1:
                 self.play()
+            elif choice == 2:
+                self.add_quiz()
             elif choice == 3:
                 self.list_quizzes()
             elif choice == 5:
