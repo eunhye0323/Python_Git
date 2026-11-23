@@ -383,6 +383,13 @@ Quiz Game | Menu
 
 - 프로젝트의 GitHub 저장소 [eunhye0323/Python_Git](https://github.com/eunhye0323/Python_Git)
 
+### Command
+- `git rev-parse`
+  - Git이 이해하는 revision, ref, 경로 관련 인자를 해석해서 스크립트나 사용자가 바로 쓸 수 있는 형태로 바꿔 주는 명령어
+- `git rev-list` : 지정된 시작 지점부터 커밋 그래프를 순회하여 커밋 객체를 역시간 순서로 나열하고, 포함/제외 규칙과 선택적 필터를 적용
+- `git add .` : **.gitignore 파일에 있는 파일들은 제외**하고 stage에 올림
+- `git add *` : **.gitignore 파일에 있는 파일들도 포함**해 stage에 올림
+
 ### 커밋 단위와 메시지 규칙
 
 - **커밋 단위**는 독립적으로 검증하거나 되돌릴 수 있는 변경 한 가지. 예를 들어 무작위 출제와 힌트 감점은 각각 한 커밋으로 작성. 같은 결함을 고치는 구현과 회귀 테스트는 함께 담을 수 있고, 관련 없는 문항·문서 수정은 별도 커밋으로 분리
